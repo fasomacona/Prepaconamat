@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema interactivo de Operaciones Algebraicas - Prepa CONAMAT">
+  <title>Operaciones Algebraicas | Prepa CONAMAT</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Modal de registro del alumno -->
+  <div id="student-modal" class="modal-overlay">
+    <div class="modal-card">
+      <img src="assets/conamat_logo.png" alt="Prepa CONAMAT" class="modal-logo">
+      <h2>Registro del Alumno</h2>
+      <p class="modal-desc">Ingresa tus datos para comenzar. Se guardarán junto con tus resultados de tarea y examen.</p>
+      <form id="student-form">
+        <div class="form-group">
+          <label for="student-name">Nombre completo *</label>
+          <input type="text" id="student-name" required placeholder="Ej: Juan Carlos Pérez López" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="student-group">Grupo *</label>
+          <input type="text" id="student-group" required placeholder="Ej: 3A, 5B, 2C..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="student-schedule">Horario *</label>
+          <select id="student-schedule" required>
+            <option value="">Selecciona tu horario</option>
+            <option value="Matutino">Matutino</option>
+            <option value="Vespertino">Vespertino</option>
+            <option value="Nocturno">Nocturno</option>
+            <option value="Sabatino">Sabatino</option>
+          </select>
+        </div>
+        <button type="submit" class="btn primary large full-width">Ingresar al sistema</button>
+      </form>
+      <p class="modal-note">* Campos obligatorios</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <img src="assets/conamat_logo.png" alt="Prepa CONAMAT" class="logo">
+      <div class="header-text">
+        <h1>Operaciones Algebraicas</h1>
+        <p class="subtitle">Educando para el futuro</p>
+      </div>
+    </div>
+    <div class="student-badge" id="student-badge" style="display:none;">
+      <span id="badge-name"></span>
+      <span class="badge-meta" id="badge-meta"></span>
+      <button id="change-student-btn" class="btn-link" title="Cambiar alumno">Cambiar</button>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-section="inicio">Inicio</button>
+      <button class="nav-btn" data-section="teoria">Teoría y Ejemplos</button>
+      <button class="nav-btn" data-section="ejercicios">Ejercicios</button>
+      <button class="nav-btn" data-section="tarea">Tarea</button>
+      <button class="nav-btn" data-section="examen">Examen Final</button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <!-- INICIO -->
+    <section id="inicio" class="section active">
+      <div class="hero">
+        <h2>¡Bienvenido al Sistema de Operaciones Algebraicas!</h2>
+        <p class="lead">Aprende, practica y evalúa tus conocimientos sobre las operaciones con expresiones algebraicas de forma interactiva.</p>
+        
+        <div class="info-cards">
+          <div class="card">
+            <div class="card-icon">📚</div>
+            <h3>Teoría y Ejemplos</h3>
+            <p>Conceptos claros con ejemplos resueltos paso a paso de suma, resta, multiplicación y división de polinomios.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">✏️</div>
+            <h3>Ejercicios Interactivos</h3>
+            <p>Practica con ejercicios generados aleatoriamente y recibe retroalimentación inmediata.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">📝</div>
+            <h3>Tarea</h3>
+            <p>10 ejercicios para reforzar lo aprendido. Tus resultados se guardan automáticamente.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">⏱️</div>
+            <h3>Examen Final</h3>
+            <p>Evaluación cronometrada de 30 minutos. Resultados guardados en la nube.</p>
+          </div>
+        </div>
+
+        <div class="credit-box">
+          <p><strong>Sistema realizado por:</strong></p>
+          <p class="author">Prof. Fabián Soberanes Martín</p>
+          <p class="institution">Prepa CONAMAT — Educando para el futuro</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEORÍA -->
+    <section id="teoria" class="section">
+      <h2>Teoría y Ejemplos</h2>
+      
+      <div class="topic-tabs">
+        <button class="topic-btn active" data-topic="suma">Suma</button>
+        <button class="topic-btn" data-topic="resta">Resta</button>
+        <button class="topic-btn" data-topic="multiplicacion">Multiplicación</button>
+        <button class="topic-btn" data-topic="division">División</button>
+      </div>
+
+      <div id="topic-suma" class="topic-content active">
+        <h3>Suma de Expresiones Algebraicas</h3>
+        <div class="theory-box">
+          <p>Para sumar polinomios se suman los términos semejantes (aquellos que tienen la misma parte literal).</p>
+          <p><strong>Regla:</strong> Se suman los coeficientes de los términos semejantes y se conserva la parte literal.</p>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 1</h4>
+          <p class="problem">Suma: (3x² + 5x − 2) + (2x² − 3x + 7)</p>
+          <div class="steps">
+            <p><strong>Paso 1:</strong> Agrupa los términos semejantes:</p>
+            <p class="math">(3x² + 2x²) + (5x − 3x) + (−2 + 7)</p>
+            <p><strong>Paso 2:</strong> Suma los coeficientes:</p>
+            <p class="math">5x² + 2x + 5</p>
+            <p class="result">✅ Resultado: <strong>5x² + 2x + 5</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 2</h4>
+          <p class="problem">Suma: (4a³ − 2a² + a) + (−a³ + 5a² − 3a + 1)</p>
+          <div class="steps">
+            <p><strong>Paso 1:</strong> Agrupa términos semejantes:</p>
+            <p class="math">(4a³ − a³) + (−2a² + 5a²) + (a − 3a) + 1</p>
+            <p><strong>Paso 2:</strong> Opera los coeficientes:</p>
+            <p class="math">3a³ + 3a² − 2a + 1</p>
+            <p class="result">✅ Resultado: <strong>3a³ + 3a² − 2a + 1</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="topic-resta" class="topic-content">
+        <h3>Resta de Expresiones Algebraicas</h3>
+        <div class="theory-box">
+          <p>Para restar un polinomio se cambia el signo de cada uno de sus términos y luego se suma con el otro polinomio.</p>
+          <p><strong>Regla:</strong> A − B = A + (−B). Cambiar todos los signos del sustraendo.</p>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 1</h4>
+          <p class="problem">Resta: (5x² + 3x − 4) − (2x² − x + 6)</p>
+          <div class="steps">
+            <p><strong>Paso 1:</strong> Cambia los signos del segundo polinomio:</p>
+            <p class="math">(5x² + 3x − 4) + (−2x² + x − 6)</p>
+            <p><strong>Paso 2:</strong> Agrupa y suma términos semejantes:</p>
+            <p class="math">(5x² − 2x²) + (3x + x) + (−4 − 6) = 3x² + 4x − 10</p>
+            <p class="result">✅ Resultado: <strong>3x² + 4x − 10</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 2</h4>
+          <p class="problem">Resta: (7y³ − 4y + 2) − (3y³ + 5y² − y − 8)</p>
+          <div class="steps">
+            <p><strong>Paso 1:</strong> Cambia signos del sustraendo:</p>
+            <p class="math">7y³ − 4y + 2 − 3y³ − 5y² + y + 8</p>
+            <p><strong>Paso 2:</strong> Agrupa:</p>
+            <p class="math">(7y³ − 3y³) − 5y² + (−4y + y) + (2 + 8) = 4y³ − 5y² − 3y + 10</p>
+            <p class="result">✅ Resultado: <strong>4y³ − 5y² − 3y + 10</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="topic-multiplicacion" class="topic-content">
+        <h3>Multiplicación de Expresiones Algebraicas</h3>
+        <div class="theory-box">
+          <p>Para multiplicar polinomios se aplica la propiedad distributiva: cada término del primer factor se multiplica por cada término del segundo.</p>
+          <p><strong>Reglas de signos:</strong> (+)·(+) = +, (−)·(−) = +, (+)·(−) = −</p>
+          <p><strong>Potencias:</strong> x<sup>m</sup> · x<sup>n</sup> = x<sup>m+n</sup></p>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 1 — Monomio por polinomio</h4>
+          <p class="problem">Multiplica: 3x · (2x² − 5x + 4)</p>
+          <div class="steps">
+            <p class="math">3x · 2x² = 6x³ &nbsp;&nbsp; 3x · (−5x) = −15x² &nbsp;&nbsp; 3x · 4 = 12x</p>
+            <p class="result">✅ Resultado: <strong>6x³ − 15x² + 12x</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 2 — Binomio por binomio</h4>
+          <p class="problem">Multiplica: (x + 3)(x − 5)</p>
+          <div class="steps">
+            <p class="math">x·x = x² &nbsp;&nbsp; x·(−5) = −5x &nbsp;&nbsp; 3·x = 3x &nbsp;&nbsp; 3·(−5) = −15</p>
+            <p class="math">x² − 5x + 3x − 15 = x² − 2x − 15</p>
+            <p class="result">✅ Resultado: <strong>x² − 2x − 15</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 3 — Polinomio por polinomio</h4>
+          <p class="problem">Multiplica: (2x − 1)(x² + 3x − 4)</p>
+          <div class="steps">
+            <p class="math">2x³ + 6x² − 8x − x² − 3x + 4 = 2x³ + 5x² − 11x + 4</p>
+            <p class="result">✅ Resultado: <strong>2x³ + 5x² − 11x + 4</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="topic-division" class="topic-content">
+        <h3>División de Expresiones Algebraicas</h3>
+        <div class="theory-box">
+          <p>La división de polinomios se realiza de forma similar a la división de números enteros.</p>
+          <p><strong>Regla de potencias:</strong> x<sup>m</sup> / x<sup>n</sup> = x<sup>m−n</sup> (si m ≥ n)</p>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 1 — Monomio entre monomio</h4>
+          <p class="problem">Divide: 12x⁵ ÷ 4x²</p>
+          <div class="steps">
+            <p class="math">12/4 = 3 &nbsp;&nbsp; x⁵ / x² = x³</p>
+            <p class="result">✅ Resultado: <strong>3x³</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 2 — Polinomio entre monomio</h4>
+          <p class="problem">Divide: (8x³ − 12x² + 4x) ÷ 4x</p>
+          <div class="steps">
+            <p class="math">8x³/4x = 2x² &nbsp;&nbsp; −12x²/4x = −3x &nbsp;&nbsp; 4x/4x = 1</p>
+            <p class="result">✅ Resultado: <strong>2x² − 3x + 1</strong></p>
+          </div>
+        </div>
+        <div class="example-box">
+          <h4>Ejemplo 3 — División de polinomios</h4>
+          <p class="problem">Divide: (x³ − 2x² − 5x + 6) ÷ (x − 3)</p>
+          <div class="steps">
+            <p class="math">Cociente: x² + x − 2 &nbsp;&nbsp; Residuo: 0</p>
+            <p class="result">✅ Resultado: <strong>x² + x − 2</strong> (división exacta)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EJERCICIOS INTERACTIVOS -->
+    <section id="ejercicios" class="section">
+      <h2>Ejercicios Interactivos</h2>
+      <p class="section-desc">Practica con ejercicios generados aleatoriamente. Escribe tu respuesta y verifica.</p>
+      
+      <div class="exercise-controls">
+        <label>Tipo de operación:</label>
+        <select id="exercise-type">
+          <option value="suma">Suma</option>
+          <option value="resta">Resta</option>
+          <option value="multiplicacion">Multiplicación</option>
+          <option value="division">División</option>
+        </select>
+        <button id="new-exercise-btn" class="btn primary">Nuevo ejercicio</button>
+      </div>
+
+      <div class="exercise-card">
+        <div id="exercise-problem" class="problem-display">Presiona "Nuevo ejercicio" para comenzar</div>
+        <div class="answer-area">
+          <label for="user-answer">Tu respuesta:</label>
+          <input type="text" id="user-answer" placeholder="Ej: 3x^2 + 2x - 5" autocomplete="off">
+          <p class="hint">Usa ^ para potencias (ej: x^2). Espacios opcionales.</p>
+          <div class="btn-group">
+            <button id="check-answer-btn" class="btn success">Verificar</button>
+            <button id="show-solution-btn" class="btn secondary">Ver solución</button>
+          </div>
+        </div>
+        <div id="feedback" class="feedback"></div>
+      </div>
+
+      <div class="stats-bar">
+        <span>Correctas: <strong id="correct-count">0</strong></span>
+        <span>Intentos: <strong id="attempt-count">0</strong></span>
+        <span>Precisión: <strong id="accuracy">—</strong></span>
+      </div>
+    </section>
+
+    <!-- TAREA -->
+    <section id="tarea" class="section">
+      <h2>Tarea — 10 Ejercicios</h2>
+      <p class="section-desc">Resuelve los siguientes ejercicios. Al verificar, tus resultados se guardarán automáticamente en Supabase.</p>
+      
+      <div class="tarea-actions">
+        <button id="print-tarea" class="btn secondary">🖨️ Imprimir tarea</button>
+        <button id="check-all-tarea" class="btn success">Verificar y guardar</button>
+        <button id="show-all-answers" class="btn secondary">Mostrar respuestas</button>
+      </div>
+
+      <div id="tarea-save-status" class="save-status" style="display:none;"></div>
+      <div id="tarea-list" class="tarea-list"></div>
+      <div id="tarea-score" class="score-box" style="display:none;"></div>
+    </section>
+
+    <!-- EXAMEN FINAL -->
+    <section id="examen" class="section">
+      <h2>Examen Final</h2>
+      
+      <div id="exam-start-screen" class="exam-screen">
+        <div class="exam-info-card">
+          <h3>Instrucciones</h3>
+          <ul>
+            <li>Duración: <strong>30 minutos</strong></li>
+            <li>Número de preguntas: <strong>10</strong></li>
+            <li>Cada pregunta vale 1 punto</li>
+            <li>Puedes navegar entre preguntas libremente</li>
+            <li>Al terminar el tiempo, el examen se envía automáticamente</li>
+            <li>Los resultados se guardan automáticamente con tus datos</li>
+          </ul>
+          <p class="warning">⚠️ Una vez iniciado, el temporizador no se puede pausar.</p>
+          <button id="start-exam-btn" class="btn primary large">Iniciar Examen</button>
+        </div>
+      </div>
+
+      <div id="exam-active-screen" class="exam-screen" style="display:none;">
+        <div class="exam-header">
+          <div class="timer" id="exam-timer">30:00</div>
+          <div class="progress">Pregunta <span id="current-q">1</span> de 10</div>
+        </div>
+        <div id="exam-question" class="exam-question-card"></div>
+        <div class="exam-nav">
+          <button id="prev-q" class="btn secondary">← Anterior</button>
+          <div class="q-dots" id="q-dots"></div>
+          <button id="next-q" class="btn secondary">Siguiente →</button>
+        </div>
+        <button id="submit-exam-btn" class="btn danger">Enviar examen</button>
+      </div>
+
+      <div id="exam-result-screen" class="exam-screen" style="display:none;">
+        <div class="result-card">
+          <h3>Resultados del Examen</h3>
+          <div class="score-circle"><span id="final-score">0</span>/10</div>
+          <p id="score-message"></p>
+          <div id="exam-save-status" class="save-status"></div>
+          <div id="exam-review" class="exam-review"></div>
+          <button id="retry-exam-btn" class="btn primary">Reintentar examen</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 Prepa CONAMAT — Sistema de Operaciones Algebraicas</p>
+    <p>Realizado por el <strong>Prof. Fabián Soberanes Martín</strong></p>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
