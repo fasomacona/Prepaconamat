@@ -261,8 +261,24 @@
 
       <div class="exercise-card">
         <div id="exercise-problem" class="problem-display">Presiona "Nuevo ejercicio" para comenzar</div>
+        
+        <!-- Área de dibujo con lápiz óptico -->
+        <div class="drawing-pad-wrap">
+          <div class="drawing-toolbar">
+            <span class="drawing-label">✏️ Escribe aquí con lápiz óptico, dedo o ratón:</span>
+            <div class="drawing-tools">
+              <button type="button" class="tool-btn active" data-pad="exercise" data-tool="pen" title="Lápiz">✏️</button>
+              <button type="button" class="tool-btn" data-pad="exercise" data-tool="eraser" title="Borrador">🧽</button>
+              <input type="color" id="exercise-pen-color" value="#1a3a6e" title="Color">
+              <input type="range" id="exercise-pen-size" min="1" max="12" value="3" title="Grosor">
+              <button type="button" class="btn secondary btn-sm" id="exercise-clear-canvas">Limpiar</button>
+            </div>
+          </div>
+          <canvas id="exercise-canvas" class="drawing-canvas" width="800" height="220"></canvas>
+        </div>
+
         <div class="answer-area">
-          <label for="user-answer">Tu respuesta:</label>
+          <label for="user-answer">Tu respuesta final:</label>
           <input type="text" id="user-answer" placeholder="Ej: 3x^2 + 2x - 5" autocomplete="off">
           <p class="hint">Usa ^ para potencias (ej: x^2). Espacios opcionales.</p>
           <div class="btn-group">
@@ -323,7 +339,7 @@
             <li>Cada pregunta vale 1 punto</li>
             <li>Puedes navegar entre preguntas libremente</li>
             <li>Al terminar el tiempo, el examen se envía automáticamente</li>
-            <li>Debes realizar los procedimientos en una hoja y <strong>subir una foto</strong> al final</li>
+            <li>Al terminar se abrirá la <strong>cámara</strong> para fotografiar tus procedimientos (se guardan en la base de datos)</li>
             <li>Los resultados se guardan automáticamente con tus datos</li>
           </ul>
           <p class="warning">⚠️ Una vez iniciado, el temporizador no se puede pausar.</p>
@@ -343,18 +359,77 @@
           <button id="next-q" class="btn secondary">Siguiente →</button>
         </div>
 
-        <!-- Subida de imagen de procedimientos -->
+        <!-- Procedimientos: lápiz óptico + opción de subir foto -->
         <div class="upload-section">
-          <h4>📷 Evidencia de procedimientos</h4>
-          <p class="upload-hint">Toma una foto o sube una imagen de la hoja donde realizaste tus procedimientos (opcional pero recomendado).</p>
-          <input type="file" id="procedure-image" accept="image/*" capture="environment">
-          <div id="image-preview" class="image-preview" style="display:none;">
-            <img id="preview-img" alt="Vista previa">
-            <button type="button" id="remove-image" class="btn secondary btn-sm">Quitar imagen</button>
+          <h4>✏️ Procedimientos (escribe con lápiz óptico)</h4>
+          <p class="upload-hint">Usa tu lápiz óptico, dedo o ratón para escribir los procedimientos de cada ejercicio aquí.</p>
+          
+          <div class="drawing-pad-wrap exam-drawing">
+            <div class="drawing-toolbar">
+              <div class="drawing-tools">
+                <button type="button" class="tool-btn active" data-pad="exam" data-tool="pen" title="Lápiz">✏️</button>
+                <button type="button" class="tool-btn" data-pad="exam" data-tool="eraser" title="Borrador">🧽</button>
+                <input type="color" id="exam-pen-color" value="#1a3a6e" title="Color">
+                <input type="range" id="exam-pen-size" min="1" max="14" value="3" title="Grosor">
+                <button type="button" class="btn secondary btn-sm" id="exam-clear-canvas">Limpiar pizarra</button>
+              </div>
+            </div>
+            <canvas id="exam-canvas" class="drawing-canvas" width="900" height="360"></canvas>
+          </div>
+
+          <div class="upload-alt">
+            <p class="upload-hint" style="margin-top:1rem;">O sube una foto de tu hoja de procedimientos:</p>
+            <input type="file" id="procedure-image" accept="image/*" capture="environment">
+            <div id="image-preview" class="image-preview" style="display:none;">
+              <img id="preview-img" alt="Vista previa">
+              <button type="button" id="remove-image" class="btn secondary btn-sm">Quitar imagen</button>
+            </div>
           </div>
         </div>
 
-        <button id="submit-exam-btn" class="btn danger">Enviar examen</button>
+        <button id="submit-exam-btn" class="btn danger">Terminar y fotografiar procedimientos</button>
+      </div>
+
+      <!-- Pantalla de cámara al terminar el examen -->
+      <div id="exam-camera-screen" class="exam-screen" style="display:none;">
+        <div class="camera-card">
+          <h3>📷 Fotografía tus procedimientos</h3>
+          <p class="camera-desc">Toma una o más fotos de la hoja donde resolviste el examen. Las imágenes se guardarán en la base de datos junto con tus resultados.</p>
+          
+          <div class="camera-viewport">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-snapshot" style="display:none;"></canvas>
+            <div id="camera-placeholder" class="camera-placeholder">
+              <p>Presiona el botón para activar la cámara</p>
+            </div>
+          </div>
+
+          <div class="camera-controls">
+            <button type="button" id="start-camera-btn" class="btn primary">🎥 Activar cámara</button>
+            <button type="button" id="capture-photo-btn" class="btn success" style="display:none;">📸 Tomar foto</button>
+            <button type="button" id="switch-camera-btn" class="btn secondary" style="display:none;">🔄 Cambiar cámara</button>
+            <button type="button" id="stop-camera-btn" class="btn secondary" style="display:none;">Detener cámara</button>
+          </div>
+
+          <!-- Alternativa: subir desde galería -->
+          <div class="camera-alt">
+            <label class="btn secondary">
+              📁 Subir desde galería
+              <input type="file" id="gallery-upload" accept="image/*" multiple style="display:none;">
+            </label>
+          </div>
+
+          <div id="captured-photos" class="captured-photos"></div>
+
+          <div class="camera-actions">
+            <button type="button" id="finish-with-photos-btn" class="btn primary large" disabled>
+              Guardar y ver resultados
+            </button>
+            <button type="button" id="skip-photos-btn" class="btn secondary">
+              Continuar sin fotos
+            </button>
+          </div>
+        </div>
       </div>
 
       <div id="exam-result-screen" class="exam-screen" style="display:none;">

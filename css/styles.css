@@ -951,3 +951,255 @@ h2 { font-size: 1.75rem; color: var(--primary); margin-bottom: 0.5rem; }
     height: 40px;
   }
 }
+
+/* ========== PIZARRA / LÁPIZ ÓPTICO ========== */
+.drawing-pad-wrap {
+  margin: 1rem 0 1.25rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fffef8;
+}
+
+.drawing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f1f3f5;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawing-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.drawing-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.tool-btn:hover {
+  border-color: var(--primary-light);
+  background: #e8f0fe;
+}
+
+.tool-btn.active {
+  border-color: var(--primary);
+  background: #e8f0fe;
+  box-shadow: 0 0 0 2px rgba(26, 58, 110, 0.2);
+}
+
+.drawing-tools input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: white;
+}
+
+.drawing-tools input[type="range"] {
+  width: 70px;
+  cursor: pointer;
+}
+
+.drawing-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none; /* Crucial para stylus/touch: evita scroll al dibujar */
+  cursor: crosshair;
+  background:
+    linear-gradient(90deg, #e8e8e8 1px, transparent 1px),
+    linear-gradient(#e8e8e8 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: #fffef8;
+}
+
+.exam-drawing .drawing-canvas {
+  min-height: 280px;
+}
+
+.upload-alt {
+  border-top: 1px dashed var(--border);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .drawing-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .drawing-canvas {
+    min-height: 180px;
+  }
+  .exam-drawing .drawing-canvas {
+    min-height: 220px;
+  }
+}
+
+/* ========== CÁMARA DE PROCEDIMIENTOS ========== */
+.camera-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.camera-card h3 {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.camera-desc {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.camera-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 1rem;
+  aspect-ratio: 4 / 3;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.camera-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.camera-viewport video.active {
+  display: block;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 0.95rem;
+  padding: 1rem;
+}
+
+.camera-placeholder.hidden {
+  display: none;
+}
+
+.camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.camera-alt {
+  margin-bottom: 1.25rem;
+}
+
+.camera-alt label {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.captured-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  min-height: 0;
+}
+
+.captured-photo {
+  position: relative;
+  width: 120px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--success);
+  box-shadow: var(--shadow);
+}
+
+.captured-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captured-photo .remove-photo {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.camera-actions .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .camera-viewport {
+    max-width: 100%;
+  }
+  .captured-photo {
+    width: 100px;
+    height: 75px;
+  }
+}

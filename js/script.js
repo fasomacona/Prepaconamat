@@ -563,7 +563,11 @@ function startExam() {
 
   document.getElementById('exam-start-screen').style.display = 'none';
   document.getElementById('exam-result-screen').style.display = 'none';
+  const cam = document.getElementById('exam-camera-screen');
+  if (cam) cam.style.display = 'none';
   document.getElementById('exam-active-screen').style.display = 'block';
+  capturedPhotos = [];
+  stopCamera && stopCamera();
 
   renderQDots();
   showExamQuestion();
@@ -577,7 +581,7 @@ function startTimer() {
     updateTimerDisplay();
     if (timeLeft <= 0) {
       clearInterval(examTimer);
-      submitExam();
+      finishExamQuestions();
     }
   }, 1000);
 }
@@ -682,26 +686,38 @@ document.getElementById('remove-image').addEventListener('click', () => {
   document.getElementById('image-preview').style.display = 'none';
 });
 
+// Estado del examen al calificar (antes de fotos)
+let pendingExamScore = 0;
+let pendingExamDetalles = [];
+let capturedPhotos = []; // array de dataURLs
+let cameraStream = null;
+let useFrontCamera = false;
+
 document.getElementById('submit-exam-btn').addEventListener('click', () => {
-  if (confirm('¿Estás seguro de enviar el examen?')) {
-    submitExam();
+  if (confirm('¿Terminar el examen y pasar a fotografiar tus procedimientos?')) {
+    finishExamQuestions();
   }
 });
 
-async function submitExam() {
+function finishExamQuestions() {
   clearInterval(examTimer);
+
+  // Si hay dibujo en pizarra, incluirlo como primera "foto"
+  if (examPad && !examPad.isEmpty()) {
+    try {
+      const padImg = examPad.toDataURL('image/jpeg', 0.8);
+      if (!procedureImageData) procedureImageData = padImg;
+    } catch (e) {}
+  }
 
   let score = 0;
   const detalles = [];
   const letters = ['A', 'B', 'C', 'D'];
-  const review = document.getElementById('exam-review');
-  review.innerHTML = '';
 
   examQuestions.forEach((q, i) => {
     const chosen = examAnswers[i];
     const ok = chosen !== null && chosen === q.correctIndex;
     if (ok) score++;
-
     detalles.push({
       numero: i + 1,
       problema: q.problem,
@@ -710,16 +726,194 @@ async function submitExam() {
       respuestaCorrecta: letters[q.correctIndex] + ') ' + q.correctStr,
       correcto: ok
     });
+  });
 
+  pendingExamScore = score;
+  pendingExamDetalles = detalles;
+  capturedPhotos = [];
+
+  // Si ya había una imagen subida durante el examen, agregarla
+  if (procedureImageData) {
+    capturedPhotos.push(procedureImageData);
+  }
+
+  document.getElementById('exam-active-screen').style.display = 'none';
+  document.getElementById('exam-result-screen').style.display = 'none';
+  document.getElementById('exam-camera-screen').style.display = 'block';
+
+  renderCapturedPhotos();
+  // Abrir cámara automáticamente
+  setTimeout(() => startCamera(), 300);
+}
+
+function renderCapturedPhotos() {
+  const container = document.getElementById('captured-photos');
+  container.innerHTML = '';
+  capturedPhotos.forEach((dataUrl, i) => {
     const div = document.createElement('div');
-    div.className = 'review-item ' + (ok ? 'ok' : 'fail');
+    div.className = 'captured-photo';
     div.innerHTML = `
-      <strong>${i + 1}.</strong> ${q.problem}<br>
-      Tu respuesta: ${chosen !== null ? letters[chosen] + ') ' + q.options[chosen] : '(sin responder)'}
-      ${ok ? ' ✅' : ' ❌ Correcta: ' + letters[q.correctIndex] + ') ' + q.correctStr}
+      <img src="${dataUrl}" alt="Foto ${i + 1}">
+      <button type="button" class="remove-photo" data-idx="${i}" title="Quitar">×</button>
+    `;
+    container.appendChild(div);
+  });
+  container.querySelectorAll('.remove-photo').forEach(btn => {
+    btn.addEventListener('click', () => {
+      capturedPhotos.splice(Number(btn.dataset.idx), 1);
+      renderCapturedPhotos();
+    });
+  });
+  document.getElementById('finish-with-photos-btn').disabled = capturedPhotos.length === 0;
+}
+
+async function startCamera() {
+  stopCamera();
+  const video = document.getElementById('camera-video');
+  const placeholder = document.getElementById('camera-placeholder');
+  try {
+    const constraints = {
+      video: {
+        facingMode: useFrontCamera ? 'user' : 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = cameraStream;
+    video.classList.add('active');
+    placeholder.classList.add('hidden');
+    document.getElementById('start-camera-btn').style.display = 'none';
+    document.getElementById('capture-photo-btn').style.display = 'inline-block';
+    document.getElementById('switch-camera-btn').style.display = 'inline-block';
+    document.getElementById('stop-camera-btn').style.display = 'inline-block';
+  } catch (err) {
+    console.error('Cámara:', err);
+    placeholder.classList.remove('hidden');
+    placeholder.innerHTML = '<p>No se pudo acceder a la cámara.<br>Usa "Subir desde galería" o permite el permiso de cámara.</p>';
+    document.getElementById('start-camera-btn').style.display = 'inline-block';
+    alert('No se pudo abrir la cámara. Revisa los permisos del navegador o sube fotos desde la galería.');
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('camera-video');
+  if (video) {
+    video.srcObject = null;
+    video.classList.remove('active');
+  }
+  const placeholder = document.getElementById('camera-placeholder');
+  if (placeholder) placeholder.classList.remove('hidden');
+  const cap = document.getElementById('capture-photo-btn');
+  const sw = document.getElementById('switch-camera-btn');
+  const st = document.getElementById('stop-camera-btn');
+  const start = document.getElementById('start-camera-btn');
+  if (cap) cap.style.display = 'none';
+  if (sw) sw.style.display = 'none';
+  if (st) st.style.display = 'none';
+  if (start) start.style.display = 'inline-block';
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-snapshot');
+  if (!video || !video.srcObject || video.videoWidth === 0) {
+    alert('La cámara aún no está lista.');
+    return;
+  }
+  // Limitar tamaño para no saturar Supabase
+  const maxW = 1024;
+  let w = video.videoWidth;
+  let h = video.videoHeight;
+  if (w > maxW) {
+    h = Math.round(h * (maxW / w));
+    w = maxW;
+  }
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  capturedPhotos.push(dataUrl);
+  renderCapturedPhotos();
+}
+
+// Botones de cámara
+document.getElementById('start-camera-btn').addEventListener('click', startCamera);
+document.getElementById('capture-photo-btn').addEventListener('click', capturePhoto);
+document.getElementById('switch-camera-btn').addEventListener('click', () => {
+  useFrontCamera = !useFrontCamera;
+  startCamera();
+});
+document.getElementById('stop-camera-btn').addEventListener('click', stopCamera);
+
+document.getElementById('gallery-upload').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Una imagen es muy grande (máx. 5 MB): ' + file.name);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      capturedPhotos.push(ev.target.result);
+      renderCapturedPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+document.getElementById('finish-with-photos-btn').addEventListener('click', () => {
+  stopCamera();
+  finalizeExamAndSave();
+});
+
+document.getElementById('skip-photos-btn').addEventListener('click', () => {
+  if (capturedPhotos.length === 0 && !confirm('¿Continuar sin fotos de procedimientos?')) return;
+  stopCamera();
+  finalizeExamAndSave();
+});
+
+async function finalizeExamAndSave() {
+  const score = pendingExamScore;
+  const detalles = pendingExamDetalles;
+  const letters = ['A', 'B', 'C', 'D'];
+
+  // Preparar revisión visual
+  const review = document.getElementById('exam-review');
+  review.innerHTML = '';
+  detalles.forEach((d) => {
+    const div = document.createElement('div');
+    div.className = 'review-item ' + (d.correcto ? 'ok' : 'fail');
+    div.innerHTML = `
+      <strong>${d.numero}.</strong> ${d.problema}<br>
+      Tu respuesta: ${d.respuestaAlumno}
+      ${d.correcto ? ' ✅' : ' ❌ Correcta: ' + d.respuestaCorrecta}
     `;
     review.appendChild(div);
   });
+
+  // Mostrar miniaturas de fotos en resultados
+  if (capturedPhotos.length > 0) {
+    const photosDiv = document.createElement('div');
+    photosDiv.style.cssText = 'margin:1rem 0;display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;';
+    photosDiv.innerHTML = '<p style="width:100%;text-align:center;font-weight:500;">Fotos de procedimientos:</p>';
+    capturedPhotos.forEach((url, i) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Procedimiento ' + (i + 1);
+      img.style.cssText = 'width:100px;height:75px;object-fit:cover;border-radius:6px;border:1px solid #ccc;';
+      photosDiv.appendChild(img);
+    });
+    review.prepend(photosDiv);
+  }
 
   document.getElementById('final-score').textContent = score;
   const msg = document.getElementById('score-message');
@@ -728,38 +922,280 @@ async function submitExam() {
   else if (score >= 5) msg.textContent = 'Aprobado. Revisa los temas donde tuviste errores.';
   else msg.textContent = 'Necesitas reforzar más. Revisa la teoría y vuelve a intentar.';
 
-  document.getElementById('exam-active-screen').style.display = 'none';
+  document.getElementById('exam-camera-screen').style.display = 'none';
   document.getElementById('exam-result-screen').style.display = 'block';
 
-  // Guardar en Supabase (incluye imagen en base64 si hay)
   const statusEl = document.getElementById('exam-save-status');
   statusEl.className = 'save-status info';
-  statusEl.textContent = 'Guardando resultados...';
+  statusEl.textContent = 'Guardando resultados e imágenes en la base de datos...';
+
+  // Limitar tamaño total de imágenes para JSON
+  const imagenes = [];
+  let totalSize = 0;
+  const maxTotal = 1200000; // ~1.2 MB en base64
+  for (const img of capturedPhotos) {
+    if (totalSize + img.length > maxTotal) {
+      imagenes.push({ omitida: true, razon: 'límite de tamaño' });
+      break;
+    }
+    imagenes.push(img);
+    totalSize += img.length;
+  }
 
   const payload = {
     respuestas: detalles,
-    tieneImagenProcedimientos: !!procedureImageData
+    cantidadFotos: capturedPhotos.length,
+    imagenesProcedimientos: imagenes,
+    tieneImagenProcedimientos: capturedPhotos.length > 0
   };
-  // Si la imagen no es demasiado grande, la incluimos
-  if (procedureImageData && procedureImageData.length < 900000) {
-    payload.imagenProcedimientos = procedureImageData;
-  } else if (procedureImageData) {
-    payload.notaImagen = 'Imagen demasiado grande para almacenar en texto; el alumno la tiene localmente.';
-  }
 
   const result = await saveResultToSupabase('examen', score, 10, payload);
   statusEl.className = 'save-status ' + (result.ok ? 'ok' : 'error');
-  statusEl.textContent = result.msg;
+  statusEl.textContent = result.msg + (capturedPhotos.length ? ` (${capturedPhotos.length} foto(s) incluidas)` : '');
 }
 
 document.getElementById('start-exam-btn').addEventListener('click', startExam);
 document.getElementById('retry-exam-btn').addEventListener('click', () => {
+  stopCamera();
   document.getElementById('exam-result-screen').style.display = 'none';
+  document.getElementById('exam-camera-screen').style.display = 'none';
   document.getElementById('exam-start-screen').style.display = 'block';
 });
+
+// Al agotarse el tiempo también va a la cámara
+// (submitExam ya no existe; el timer llama finishExamQuestions)
+
 
 // Inicialización
 renderTareaPrint();
 updatePrintStudentInfo();
 showExercise();
 
+
+
+// ============================================
+// Pizarra digital — lápiz óptico / stylus / dedo / ratón
+// ============================================
+
+class DrawingPad {
+  constructor(canvasId, opts = {}) {
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+    this.tool = 'pen';
+    this.color = opts.color || '#1a3a6e';
+    this.lineWidth = opts.lineWidth || 3;
+    this.drawing = false;
+    this.lastX = 0;
+    this.lastY = 0;
+    this._setupSize();
+    this._bind();
+  }
+
+  _setupSize() {
+    // Usar el width/height del atributo HTML como tamaño lógico
+    const logicalW = parseInt(this.canvas.getAttribute('width'), 10) || 800;
+    const logicalH = parseInt(this.canvas.getAttribute('height'), 10) || 220;
+    const dpr = window.devicePixelRatio || 1;
+
+    // Ajustar resolución interna para pantallas retina, pero dibujar en coords lógicas
+    this.canvas.width = Math.floor(logicalW * dpr);
+    this.canvas.height = Math.floor(logicalH * dpr);
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = 'auto';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.logicalW = logicalW;
+    this.logicalH = logicalH;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+  }
+
+  _pos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    let clientX, clientY, pressure = 1;
+
+    if (e.touches && e.touches.length) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+      if (e.touches[0].force > 0) pressure = Math.min(e.touches[0].force * 2, 1.5);
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+      if (typeof e.pressure === 'number' && e.pressure > 0) {
+        pressure = Math.min(e.pressure * 1.5, 1.5);
+      }
+    }
+
+    return {
+      x: (clientX - rect.left) * (this.logicalW / rect.width),
+      y: (clientY - rect.top) * (this.logicalH / rect.height),
+      pressure
+    };
+  }
+
+  _start(e) {
+    e.preventDefault();
+    this.drawing = true;
+    const p = this._pos(e);
+    this.lastX = p.x;
+    this.lastY = p.y;
+    this._dot(p);
+  }
+
+  _dot(p) {
+    const r = (this.lineWidth * p.pressure) / 2;
+    this.ctx.beginPath();
+    this.ctx.arc(p.x, p.y, Math.max(r, 0.5), 0, Math.PI * 2);
+    if (this.tool === 'eraser') {
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.ctx.fillStyle = '#000';
+    } else {
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.fillStyle = this.color;
+    }
+    this.ctx.fill();
+  }
+
+  _move(e) {
+    if (!this.drawing) return;
+    e.preventDefault();
+    const p = this._pos(e);
+    const w = this.lineWidth * (0.4 + p.pressure * 0.6);
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.lastX, this.lastY);
+    this.ctx.lineTo(p.x, p.y);
+    this.ctx.lineWidth = w;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    if (this.tool === 'eraser') {
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.ctx.strokeStyle = '#000';
+      this.ctx.lineWidth = w * 3;
+    } else {
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.strokeStyle = this.color;
+    }
+    this.ctx.stroke();
+    this.lastX = p.x;
+    this.lastY = p.y;
+  }
+
+  _end(e) {
+    if (e) e.preventDefault();
+    this.drawing = false;
+  }
+
+  _bind() {
+    const c = this.canvas;
+    // Pointer Events: mejor soporte para lápiz óptico (Surface Pen, etc.)
+    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); this._start(e); });
+    c.addEventListener('pointermove', (e) => this._move(e));
+    c.addEventListener('pointerup', (e) => { try { c.releasePointerCapture(e.pointerId); } catch(_){} this._end(e); });
+    c.addEventListener('pointercancel', (e) => this._end(e));
+    c.addEventListener('pointerleave', (e) => this._end(e));
+
+    // Touch (iPad, Android)
+    c.addEventListener('touchstart', (e) => this._start(e), { passive: false });
+    c.addEventListener('touchmove', (e) => this._move(e), { passive: false });
+    c.addEventListener('touchend', (e) => this._end(e), { passive: false });
+  }
+
+  setTool(t) { this.tool = t; }
+  setColor(c) { this.color = c; }
+  setLineWidth(w) { this.lineWidth = Number(w) || 3; }
+
+  clear() {
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.restore();
+    // Restaurar transform DPR
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  isEmpty() {
+    try {
+      const data = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) return false;
+      }
+    } catch (e) { return true; }
+    return true;
+  }
+
+  toDataURL(type = 'image/png', quality) {
+    return this.canvas.toDataURL(type, quality);
+  }
+}
+
+let exercisePad = null;
+let examPad = null;
+
+function initDrawingPads() {
+  exercisePad = new DrawingPad('exercise-canvas', { color: '#1a3a6e', lineWidth: 3 });
+  examPad = new DrawingPad('exam-canvas', { color: '#1a3a6e', lineWidth: 3 });
+
+  // Toolbar ejercicios
+  document.querySelectorAll('.tool-btn[data-pad="exercise"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tool-btn[data-pad="exercise"]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (exercisePad) exercisePad.setTool(btn.dataset.tool);
+    });
+  });
+  const el = (id) => document.getElementById(id);
+  if (el('exercise-pen-color')) el('exercise-pen-color').addEventListener('input', e => exercisePad && exercisePad.setColor(e.target.value));
+  if (el('exercise-pen-size')) el('exercise-pen-size').addEventListener('input', e => exercisePad && exercisePad.setLineWidth(e.target.value));
+  if (el('exercise-clear-canvas')) el('exercise-clear-canvas').addEventListener('click', () => exercisePad && exercisePad.clear());
+
+  // Toolbar examen
+  document.querySelectorAll('.tool-btn[data-pad="exam"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tool-btn[data-pad="exam"]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (examPad) examPad.setTool(btn.dataset.tool);
+    });
+  });
+  if (el('exam-pen-color')) el('exam-pen-color').addEventListener('input', e => examPad && examPad.setColor(e.target.value));
+  if (el('exam-pen-size')) el('exam-pen-size').addEventListener('input', e => examPad && examPad.setLineWidth(e.target.value));
+  if (el('exam-clear-canvas')) {
+    el('exam-clear-canvas').addEventListener('click', () => {
+      if (confirm('¿Limpiar toda la pizarra de procedimientos?')) examPad && examPad.clear();
+    });
+  }
+
+  // Limpiar pizarra de ejercicios al generar nuevo
+  const newBtn = el('new-exercise-btn');
+  if (newBtn) {
+    newBtn.addEventListener('click', () => setTimeout(() => exercisePad && exercisePad.clear(), 30));
+  }
+
+  // Limpiar pizarra de examen al iniciar
+  const startBtn = el('start-exam-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => setTimeout(() => examPad && examPad.clear(), 80));
+  }
+
+  // Antes de enviar examen: si no hay foto subida, usar el dibujo de la pizarra
+  const submitBtn = el('submit-exam-btn');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      if (typeof procedureImageData !== 'undefined' && !procedureImageData && examPad && !examPad.isEmpty()) {
+        try {
+          procedureImageData = examPad.toDataURL('image/jpeg', 0.8);
+        } catch (err) {
+          console.warn('Export pizarra:', err);
+        }
+      }
+    }, true);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDrawingPads);
+} else {
+  initDrawingPads();
+}
