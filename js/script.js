@@ -59,6 +59,7 @@ document.getElementById('student-form').addEventListener('submit', (e) => {
   };
   saveStudentToStorage();
   showStudentBadge();
+  if (typeof updatePrintStudentInfo === "function") updatePrintStudentInfo();
   hideModal();
 });
 
@@ -79,6 +80,7 @@ if (loadStudentFromStorage()) {
 } else {
   showModal();
 }
+// updatePrintStudentInfo se llama al final tras definirla
 
 // --- Navegación ---
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -401,111 +403,123 @@ function updateStats() {
     : '—';
 }
 
+
 // ============================================
-// Tarea (10 ejercicios)
+// Tarea (solo impresión)
 // ============================================
 
 const tareaExercises = [
-  { problem: '(3x^2 + 5x - 2) + (2x^2 - 3x + 7)', answer: {2:5, 1:2, 0:5} },
-  { problem: '(4x^3 - 2x^2 + x) + (-x^3 + 5x^2 - 3x + 1)', answer: {3:3, 2:3, 1:-2, 0:1} },
-  { problem: '(5x^2 + 3x - 4) - (2x^2 - x + 6)', answer: {2:3, 1:4, 0:-10} },
-  { problem: '(7x^3 - 4x + 2) - (3x^3 + 5x^2 - x - 8)', answer: {3:4, 2:-5, 1:-3, 0:10} },
-  { problem: '3x · (2x^2 - 5x + 4)', answer: {3:6, 2:-15, 1:12} },
-  { problem: '(x + 3)(x - 5)', answer: {2:1, 1:-2, 0:-15} },
-  { problem: '(2x - 1)(x^2 + 3x - 4)', answer: {3:2, 2:5, 1:-11, 0:4} },
-  { problem: '(12x^5 - 8x^3 + 4x^2) ÷ 4x^2', answer: {3:3, 1:-2, 0:1} },
-  { problem: '(8x^3 - 12x^2 + 4x) ÷ 4x', answer: {2:2, 1:-3, 0:1} },
-  { problem: '(x^3 - 2x^2 - 5x + 6) ÷ (x - 3)', answer: {2:1, 1:1, 0:-2} }
+  { problem: '(3x² + 5x − 2) + (2x² − 3x + 7)' },
+  { problem: '(4x³ − 2x² + x) + (−x³ + 5x² − 3x + 1)' },
+  { problem: '(5x² + 3x − 4) − (2x² − x + 6)' },
+  { problem: '(7x³ − 4x + 2) − (3x³ + 5x² − x − 8)' },
+  { problem: '3x · (2x² − 5x + 4)' },
+  { problem: '(x + 3)(x − 5)' },
+  { problem: '(2x − 1)(x² + 3x − 4)' },
+  { problem: '(12x⁵ − 8x³ + 4x²) ÷ 4x²' },
+  { problem: '(8x³ − 12x² + 4x) ÷ 4x' },
+  { problem: '(x³ − 2x² − 5x + 6) ÷ (x − 3)' }
 ];
 
-function renderTarea() {
-  const list = document.getElementById('tarea-list');
+function renderTareaPrint() {
+  const list = document.getElementById('tarea-print-list');
+  if (!list) return;
   list.innerHTML = '';
   tareaExercises.forEach((ex, i) => {
     const div = document.createElement('div');
-    div.className = 'tarea-item';
+    div.className = 'print-exercise';
     div.innerHTML = `
-      <div class="problem-text"><span class="num">${i + 1}.</span> ${ex.problem}</div>
-      <input type="text" id="tarea-ans-${i}" placeholder="Tu respuesta (usa ^ para potencias)...">
-      <div class="item-feedback" id="tarea-fb-${i}"></div>
+      <div><span class="ex-num">${i + 1}.</span> <span class="ex-problem">${ex.problem}</span></div>
+      <div class="work-space"></div>
     `;
     list.appendChild(div);
   });
 }
 
-document.getElementById('check-all-tarea').addEventListener('click', async () => {
+function updatePrintStudentInfo() {
   if (!studentData) {
-    alert('Debes registrar tus datos primero.');
+    document.getElementById('print-nombre').textContent = '_______________________________';
+    document.getElementById('print-grupo').textContent = '________';
+    document.getElementById('print-horario').textContent = '________';
+  } else {
+    document.getElementById('print-nombre').textContent = studentData.nombre;
+    document.getElementById('print-grupo').textContent = studentData.grupo;
+    document.getElementById('print-horario').textContent = studentData.horario;
+  }
+  const hoy = new Date();
+  document.getElementById('print-fecha').textContent =
+    hoy.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+document.getElementById('print-tarea').addEventListener('click', () => {
+  if (!studentData) {
+    alert('Debes registrar tus datos primero para que aparezcan en la hoja de tarea.');
     showModal();
     return;
   }
-
-  let correct = 0;
-  const detalles = [];
-
-  tareaExercises.forEach((ex, i) => {
-    const input = document.getElementById(`tarea-ans-${i}`);
-    const fb = document.getElementById(`tarea-fb-${i}`);
-    const userStr = input.value;
-    const user = parsePoly(userStr);
-    const ok = user && polysEqual(user, ex.answer);
-    if (ok) correct++;
-
-    detalles.push({
-      numero: i + 1,
-      problema: ex.problem,
-      respuestaAlumno: userStr || '(vacía)',
-      respuestaCorrecta: polyToString(ex.answer),
-      correcto: ok
-    });
-
-    fb.className = 'item-feedback show';
-    if (ok) {
-      fb.style.color = 'var(--success)';
-      fb.textContent = '✅ Correcto';
-    } else {
-      fb.style.color = 'var(--danger)';
-      fb.textContent = '❌ Incorrecto';
-    }
-  });
-
-  const scoreBox = document.getElementById('tarea-score');
-  scoreBox.style.display = 'block';
-  scoreBox.textContent = `Puntuación: ${correct} / 10`;
-
-  // Guardar en Supabase
-  const statusEl = document.getElementById('tarea-save-status');
-  statusEl.style.display = 'block';
-  statusEl.className = 'save-status info';
-  statusEl.textContent = 'Guardando resultados...';
-
-  const result = await saveResultToSupabase('tarea', correct, 10, detalles);
-  statusEl.className = 'save-status ' + (result.ok ? 'ok' : 'error');
-  statusEl.textContent = result.msg;
-});
-
-document.getElementById('show-all-answers').addEventListener('click', () => {
-  tareaExercises.forEach((ex, i) => {
-    const fb = document.getElementById(`tarea-fb-${i}`);
-    fb.className = 'item-feedback show';
-    fb.style.color = 'var(--primary)';
-    fb.textContent = 'Respuesta: ' + polyToString(ex.answer);
-  });
-});
-
-document.getElementById('print-tarea').addEventListener('click', () => {
+  updatePrintStudentInfo();
   window.print();
 });
 
 // ============================================
-// Examen Final (30 minutos)
+// Examen Final — Opción múltiple + imagen
 // ============================================
 
 let examQuestions = [];
-let examAnswers = [];
+let examAnswers = [];      // índice de la opción elegida (0-3) o null
 let currentQIndex = 0;
 let examTimer = null;
 let timeLeft = 30 * 60;
+let procedureImageData = null; // base64 de la imagen
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateDistractors(correctPoly) {
+  // Genera 3 distractores a partir del polinomio correcto
+  const distractors = [];
+  const correctStr = polyToString(correctPoly);
+
+  // 1. Cambiar un signo
+  const keys = Object.keys(correctPoly).map(Number);
+  if (keys.length > 0) {
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    const d1 = { ...correctPoly };
+    d1[k] = -d1[k];
+    if (d1[k] === 0) delete d1[k];
+    distractors.push(polyToString(d1));
+  }
+
+  // 2. Sumar/restar 1 a un coeficiente
+  if (keys.length > 0) {
+    const k = keys[0];
+    const d2 = { ...correctPoly };
+    d2[k] = (d2[k] || 0) + (Math.random() < 0.5 ? 1 : -1);
+    if (d2[k] === 0) delete d2[k];
+    distractors.push(polyToString(d2));
+  }
+
+  // 3. Polinomio aleatorio similar
+  const d3 = randomPoly(2, 4);
+  distractors.push(polyToString(d3));
+
+  // Asegurar 3 distintos y distintos del correcto
+  const unique = [];
+  for (const d of distractors) {
+    if (d !== correctStr && !unique.includes(d)) unique.push(d);
+  }
+  while (unique.length < 3) {
+    const extra = polyToString(randomPoly(2, 5));
+    if (extra !== correctStr && !unique.includes(extra)) unique.push(extra);
+  }
+  return unique.slice(0, 3);
+}
 
 function generateExamQuestions() {
   const types = ['suma', 'resta', 'multiplicacion', 'division'];
@@ -513,7 +527,17 @@ function generateExamQuestions() {
   for (let i = 0; i < 10; i++) {
     const type = types[i % 4];
     const ex = generateExercise(type);
-    qs.push({ problem: ex.problemStr, answer: ex.result, type });
+    const correctStr = polyToString(ex.result);
+    const distractors = generateDistractors(ex.result);
+    const options = shuffleArray([correctStr, ...distractors]);
+    const correctIndex = options.indexOf(correctStr);
+    qs.push({
+      problem: ex.problemStr,
+      options,
+      correctIndex,
+      correctStr,
+      type
+    });
   }
   return qs;
 }
@@ -526,9 +550,16 @@ function startExam() {
   }
 
   examQuestions = generateExamQuestions();
-  examAnswers = new Array(10).fill('');
+  examAnswers = new Array(10).fill(null);
   currentQIndex = 0;
   timeLeft = 30 * 60;
+  procedureImageData = null;
+
+  // Reset upload UI
+  const fileInput = document.getElementById('procedure-image');
+  if (fileInput) fileInput.value = '';
+  const preview = document.getElementById('image-preview');
+  if (preview) preview.style.display = 'none';
 
   document.getElementById('exam-start-screen').style.display = 'none';
   document.getElementById('exam-result-screen').style.display = 'none';
@@ -565,10 +596,9 @@ function renderQDots() {
   container.innerHTML = '';
   for (let i = 0; i < 10; i++) {
     const dot = document.createElement('button');
-    dot.className = 'q-dot' + (i === currentQIndex ? ' current' : '') + (examAnswers[i] ? ' answered' : '');
+    dot.className = 'q-dot' + (i === currentQIndex ? ' current' : '') + (examAnswers[i] !== null ? ' answered' : '');
     dot.textContent = i + 1;
     dot.addEventListener('click', () => {
-      saveCurrentAnswer();
       currentQIndex = i;
       showExamQuestion();
     });
@@ -579,21 +609,42 @@ function renderQDots() {
 function showExamQuestion() {
   const q = examQuestions[currentQIndex];
   document.getElementById('current-q').textContent = currentQIndex + 1;
+
+  const letters = ['A', 'B', 'C', 'D'];
+  let optionsHtml = '<div class="mc-options">';
+  q.options.forEach((opt, idx) => {
+    const selected = examAnswers[currentQIndex] === idx ? 'selected' : '';
+    const checked = examAnswers[currentQIndex] === idx ? 'checked' : '';
+    optionsHtml += `
+      <label class="mc-option ${selected}">
+        <input type="radio" name="mc-q" value="${idx}" ${checked}>
+        <span class="mc-letter">${letters[idx]})</span>
+        <span>${opt}</span>
+      </label>
+    `;
+  });
+  optionsHtml += '</div>';
+
   document.getElementById('exam-question').innerHTML = `
     <div class="q-text">${currentQIndex + 1}. ${q.problem}</div>
-    <input type="text" id="exam-input" placeholder="Escribe tu respuesta..." value="${examAnswers[currentQIndex] || ''}">
+    ${optionsHtml}
   `;
-  document.getElementById('exam-input').focus();
+
+  // Event listeners para opciones
+  document.querySelectorAll('.mc-option').forEach((label, idx) => {
+    label.addEventListener('click', () => {
+      examAnswers[currentQIndex] = idx;
+      document.querySelectorAll('.mc-option').forEach(l => l.classList.remove('selected'));
+      label.classList.add('selected');
+      label.querySelector('input').checked = true;
+      renderQDots();
+    });
+  });
+
   renderQDots();
 }
 
-function saveCurrentAnswer() {
-  const input = document.getElementById('exam-input');
-  if (input) examAnswers[currentQIndex] = input.value;
-}
-
 document.getElementById('prev-q').addEventListener('click', () => {
-  saveCurrentAnswer();
   if (currentQIndex > 0) {
     currentQIndex--;
     showExamQuestion();
@@ -601,11 +652,34 @@ document.getElementById('prev-q').addEventListener('click', () => {
 });
 
 document.getElementById('next-q').addEventListener('click', () => {
-  saveCurrentAnswer();
   if (currentQIndex < 9) {
     currentQIndex++;
     showExamQuestion();
   }
+});
+
+// Subida de imagen de procedimientos
+document.getElementById('procedure-image').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) {
+    alert('La imagen es muy grande. Máximo 4 MB.');
+    e.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    procedureImageData = ev.target.result;
+    document.getElementById('preview-img').src = procedureImageData;
+    document.getElementById('image-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('remove-image').addEventListener('click', () => {
+  procedureImageData = null;
+  document.getElementById('procedure-image').value = '';
+  document.getElementById('image-preview').style.display = 'none';
 });
 
 document.getElementById('submit-exam-btn').addEventListener('click', () => {
@@ -616,23 +690,24 @@ document.getElementById('submit-exam-btn').addEventListener('click', () => {
 
 async function submitExam() {
   clearInterval(examTimer);
-  saveCurrentAnswer();
 
   let score = 0;
   const detalles = [];
+  const letters = ['A', 'B', 'C', 'D'];
   const review = document.getElementById('exam-review');
   review.innerHTML = '';
 
   examQuestions.forEach((q, i) => {
-    const user = parsePoly(examAnswers[i]);
-    const ok = user && polysEqual(user, q.answer);
+    const chosen = examAnswers[i];
+    const ok = chosen !== null && chosen === q.correctIndex;
     if (ok) score++;
 
     detalles.push({
       numero: i + 1,
       problema: q.problem,
-      respuestaAlumno: examAnswers[i] || '(vacía)',
-      respuestaCorrecta: polyToString(q.answer),
+      opciones: q.options,
+      respuestaAlumno: chosen !== null ? letters[chosen] + ') ' + q.options[chosen] : '(sin responder)',
+      respuestaCorrecta: letters[q.correctIndex] + ') ' + q.correctStr,
       correcto: ok
     });
 
@@ -640,8 +715,8 @@ async function submitExam() {
     div.className = 'review-item ' + (ok ? 'ok' : 'fail');
     div.innerHTML = `
       <strong>${i + 1}.</strong> ${q.problem}<br>
-      Tu respuesta: ${examAnswers[i] || '(vacía)'} 
-      ${ok ? '✅' : '❌ Correcta: ' + polyToString(q.answer)}
+      Tu respuesta: ${chosen !== null ? letters[chosen] + ') ' + q.options[chosen] : '(sin responder)'}
+      ${ok ? ' ✅' : ' ❌ Correcta: ' + letters[q.correctIndex] + ') ' + q.correctStr}
     `;
     review.appendChild(div);
   });
@@ -656,12 +731,23 @@ async function submitExam() {
   document.getElementById('exam-active-screen').style.display = 'none';
   document.getElementById('exam-result-screen').style.display = 'block';
 
-  // Guardar en Supabase
+  // Guardar en Supabase (incluye imagen en base64 si hay)
   const statusEl = document.getElementById('exam-save-status');
   statusEl.className = 'save-status info';
   statusEl.textContent = 'Guardando resultados...';
 
-  const result = await saveResultToSupabase('examen', score, 10, detalles);
+  const payload = {
+    respuestas: detalles,
+    tieneImagenProcedimientos: !!procedureImageData
+  };
+  // Si la imagen no es demasiado grande, la incluimos
+  if (procedureImageData && procedureImageData.length < 900000) {
+    payload.imagenProcedimientos = procedureImageData;
+  } else if (procedureImageData) {
+    payload.notaImagen = 'Imagen demasiado grande para almacenar en texto; el alumno la tiene localmente.';
+  }
+
+  const result = await saveResultToSupabase('examen', score, 10, payload);
   statusEl.className = 'save-status ' + (result.ok ? 'ok' : 'error');
   statusEl.textContent = result.msg;
 }
@@ -673,5 +759,7 @@ document.getElementById('retry-exam-btn').addEventListener('click', () => {
 });
 
 // Inicialización
-renderTarea();
+renderTareaPrint();
+updatePrintStudentInfo();
 showExercise();
+

@@ -53,7 +53,7 @@ body {
 }
 
 .modal-logo {
-  height: 110px;
+  height: 70px;
   width: auto;
   margin-bottom: 1rem;
   object-fit: contain;
@@ -131,7 +131,7 @@ body {
 }
 
 .logo {
-  height: 95px;
+  height: 58px;
   width: auto;
   background: white;
   border-radius: 10px;
@@ -730,9 +730,224 @@ h2 { font-size: 1.75rem; color: var(--primary); margin-bottom: 0.5rem; }
 
 @media (max-width: 600px) {
   .header-content { flex-direction: column; text-align: center; }
-  .logo { height: 80px; }
+  .logo { height: 50px; }
   .header-text h1 { font-size: 1.35rem; }
   .nav-btn { padding: 0.6rem 0.8rem; font-size: 0.8rem; }
-  .modal-logo { height: 90px; }
+  .modal-logo { height: 60px; }
   .problem-display { font-size: 1rem; }
+}
+
+/* ========== TAREA IMPRIMIBLE ========== */
+.tarea-print-area {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.print-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.print-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+.print-title h2 {
+  font-size: 1.2rem;
+  margin: 0;
+  color: var(--primary);
+}
+
+.print-title p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.print-student-info {
+  background: #f1f3f5;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.tarea-print-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.print-exercise {
+  border-bottom: 1px dashed #ccc;
+  padding: 0.9rem 0;
+  page-break-inside: avoid;
+}
+
+.print-exercise:last-child {
+  border-bottom: none;
+}
+
+.print-exercise .ex-num {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.print-exercise .ex-problem {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1rem;
+  margin: 0.3rem 0 0.5rem;
+}
+
+.print-exercise .work-space {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-height: 70px;
+  background: #fafafa;
+  margin-top: 0.35rem;
+}
+
+.print-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ========== OPCIÓN MÚLTIPLE ========== */
+.mc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.mc-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1rem;
+  background: white;
+}
+
+.mc-option:hover {
+  border-color: var(--primary-light);
+  background: #f0f5ff;
+}
+
+.mc-option.selected {
+  border-color: var(--primary);
+  background: #e8f0fe;
+  font-weight: 500;
+}
+
+.mc-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.mc-letter {
+  font-weight: 600;
+  color: var(--primary);
+  min-width: 1.4rem;
+}
+
+/* ========== SUBIDA DE IMAGEN ========== */
+.upload-section {
+  background: #f8f9fa;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.upload-section h4 {
+  color: var(--primary);
+  margin-bottom: 0.4rem;
+}
+
+.upload-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.upload-section input[type="file"] {
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.image-preview {
+  margin-top: 1rem;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* ========== PRINT STYLES ========== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #tarea-print-area,
+  #tarea-print-area * {
+    visibility: visible;
+  }
+  #tarea-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  .no-print,
+  .header,
+  .nav,
+  .footer,
+  .modal-overlay,
+  .student-badge,
+  .tarea-actions {
+    display: none !important;
+  }
+  .print-exercise .work-space {
+    min-height: 85px;
+    border: 1px solid #999;
+  }
+  .print-logo {
+    height: 40px;
+  }
 }

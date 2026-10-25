@@ -88,12 +88,12 @@
           <div class="card">
             <div class="card-icon">📝</div>
             <h3>Tarea</h3>
-            <p>10 ejercicios para reforzar lo aprendido. Tus resultados se guardan automáticamente.</p>
+            <p>10 ejercicios para imprimir con tus datos y espacios para resolver a mano.</p>
           </div>
           <div class="card">
             <div class="card-icon">⏱️</div>
             <h3>Examen Final</h3>
-            <p>Evaluación cronometrada de 30 minutos. Resultados guardados en la nube.</p>
+            <p>Evaluación de opción múltiple (30 min). Sube foto de tus procedimientos.</p>
           </div>
         </div>
 
@@ -283,17 +283,31 @@
     <!-- TAREA -->
     <section id="tarea" class="section">
       <h2>Tarea — 10 Ejercicios</h2>
-      <p class="section-desc">Resuelve los siguientes ejercicios. Al verificar, tus resultados se guardarán automáticamente en Supabase.</p>
+      <p class="section-desc">Imprime la hoja de tarea con tus datos. Resuelve los ejercicios a mano en los espacios indicados y entrégala a tu profesor.</p>
       
-      <div class="tarea-actions">
-        <button id="print-tarea" class="btn secondary">🖨️ Imprimir tarea</button>
-        <button id="check-all-tarea" class="btn success">Verificar y guardar</button>
-        <button id="show-all-answers" class="btn secondary">Mostrar respuestas</button>
+      <div class="tarea-actions no-print">
+        <button id="print-tarea" class="btn primary large">🖨️ Imprimir tarea con mis datos</button>
       </div>
 
-      <div id="tarea-save-status" class="save-status" style="display:none;"></div>
-      <div id="tarea-list" class="tarea-list"></div>
-      <div id="tarea-score" class="score-box" style="display:none;"></div>
+      <!-- Hoja imprimible -->
+      <div id="tarea-print-area" class="tarea-print-area">
+        <div class="print-header">
+          <img src="assets/conamat_logo.png" alt="CONAMAT" class="print-logo">
+          <div class="print-title">
+            <h2>Tarea de Operaciones Algebraicas</h2>
+            <p>Prepa CONAMAT — Educando para el futuro</p>
+          </div>
+        </div>
+        <div class="print-student-info">
+          <p><strong>Nombre:</strong> <span id="print-nombre">_______________________________</span></p>
+          <p><strong>Grupo:</strong> <span id="print-grupo">________</span> &nbsp;&nbsp; <strong>Horario:</strong> <span id="print-horario">________</span></p>
+          <p><strong>Fecha:</strong> <span id="print-fecha">____________</span></p>
+        </div>
+        <div id="tarea-print-list" class="tarea-print-list"></div>
+        <div class="print-footer">
+          <p>Prof. Fabián Soberanes Martín — Prepa CONAMAT</p>
+        </div>
+      </div>
     </section>
 
     <!-- EXAMEN FINAL -->
@@ -305,10 +319,11 @@
           <h3>Instrucciones</h3>
           <ul>
             <li>Duración: <strong>30 minutos</strong></li>
-            <li>Número de preguntas: <strong>10</strong></li>
+            <li>Número de preguntas: <strong>10</strong> (opción múltiple)</li>
             <li>Cada pregunta vale 1 punto</li>
             <li>Puedes navegar entre preguntas libremente</li>
             <li>Al terminar el tiempo, el examen se envía automáticamente</li>
+            <li>Debes realizar los procedimientos en una hoja y <strong>subir una foto</strong> al final</li>
             <li>Los resultados se guardan automáticamente con tus datos</li>
           </ul>
           <p class="warning">⚠️ Una vez iniciado, el temporizador no se puede pausar.</p>
@@ -327,6 +342,18 @@
           <div class="q-dots" id="q-dots"></div>
           <button id="next-q" class="btn secondary">Siguiente →</button>
         </div>
+
+        <!-- Subida de imagen de procedimientos -->
+        <div class="upload-section">
+          <h4>📷 Evidencia de procedimientos</h4>
+          <p class="upload-hint">Toma una foto o sube una imagen de la hoja donde realizaste tus procedimientos (opcional pero recomendado).</p>
+          <input type="file" id="procedure-image" accept="image/*" capture="environment">
+          <div id="image-preview" class="image-preview" style="display:none;">
+            <img id="preview-img" alt="Vista previa">
+            <button type="button" id="remove-image" class="btn secondary btn-sm">Quitar imagen</button>
+          </div>
+        </div>
+
         <button id="submit-exam-btn" class="btn danger">Enviar examen</button>
       </div>
 

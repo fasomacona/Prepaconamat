@@ -12,10 +12,11 @@ Sistema web interactivo para el aprendizaje de **operaciones algebraicas** (suma
 - **Registro del alumno**: nombre completo, grupo y horario
 - **Teoría y ejemplos** paso a paso
 - **Ejercicios interactivos** con generación aleatoria y retroalimentación inmediata
-- **Tarea** de 10 ejercicios (resultados guardados)
-- **Examen final** de 30 minutos (10 preguntas, temporizador, resultados guardados)
-- **Logo CONAMAT** prominente
-- Resultados de tarea y examen se guardan en **Supabase**
+- **Tarea** imprimible: 10 ejercicios con datos del alumno y espacios para procedimientos a mano
+- **Examen final** de 30 minutos en **opción múltiple** (10 preguntas)
+- Subida de **foto de la hoja de procedimientos** en el examen
+- Resultados del examen se guardan en **Supabase** (incluye imagen si no es muy pesada)
+- Logo CONAMAT en encabezado y en la hoja de tarea
 
 ---
 
