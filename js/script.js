@@ -971,148 +971,179 @@ renderTareaPrint();
 updatePrintStudentInfo();
 showExercise();
 
-
-
 // ============================================
-// Pizarra digital — lápiz óptico / stylus / dedo / ratón
+// Pizarra digital — lápiz óptico / stylus (corregido)
 // ============================================
 
 class DrawingPad {
   constructor(canvasId, opts = {}) {
     this.canvas = document.getElementById(canvasId);
     if (!this.canvas) return;
-    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+
+    this.ctx = this.canvas.getContext('2d');
     this.tool = 'pen';
     this.color = opts.color || '#1a3a6e';
     this.lineWidth = opts.lineWidth || 3;
     this.drawing = false;
     this.lastX = 0;
     this.lastY = 0;
-    this._setupSize();
+    this.pointerId = null;
+
+    // Atributos HTML iniciales (tamaño de referencia)
+    this.baseW = parseInt(this.canvas.getAttribute('width'), 10) || 800;
+    this.baseH = parseInt(this.canvas.getAttribute('height'), 10) || 220;
+
+    this._fitToDisplay();
     this._bind();
+
+    // Reajustar si cambia el tamaño de la ventana
+    this._resizeObserver = new ResizeObserver(() => {
+      // Guardar dibujo actual
+      let backup = null;
+      try { backup = this.canvas.toDataURL(); } catch (e) {}
+      this._fitToDisplay();
+      if (backup) {
+        const img = new Image();
+        img.onload = () => {
+          this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+        };
+        img.src = backup;
+      }
+    });
+    this._resizeObserver.observe(this.canvas.parentElement || this.canvas);
   }
 
-  _setupSize() {
-    // Usar el width/height del atributo HTML como tamaño lógico
-    const logicalW = parseInt(this.canvas.getAttribute('width'), 10) || 800;
-    const logicalH = parseInt(this.canvas.getAttribute('height'), 10) || 220;
-    const dpr = window.devicePixelRatio || 1;
+  _fitToDisplay() {
+    const parent = this.canvas.parentElement;
+    const cssW = (parent && parent.clientWidth) ? parent.clientWidth : this.baseW;
+    const ratio = this.baseH / this.baseW;
+    const cssH = Math.max(160, Math.round(cssW * ratio));
 
-    // Ajustar resolución interna para pantallas retina, pero dibujar en coords lógicas
-    this.canvas.width = Math.floor(logicalW * dpr);
-    this.canvas.height = Math.floor(logicalH * dpr);
-    this.canvas.style.width = '100%';
-    this.canvas.style.height = 'auto';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    // Resolución interna (píxeles reales del buffer)
+    this.canvas.width = Math.floor(cssW * dpr);
+    this.canvas.height = Math.floor(cssH * dpr);
+
+    // Tamaño visual en CSS
+    this.canvas.style.width = cssW + 'px';
+    this.canvas.style.height = cssH + 'px';
+
+    // Dibujar en coordenadas CSS (más simple para el lápiz)
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.logicalW = logicalW;
-    this.logicalH = logicalH;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
+    this.ctx.imageSmoothingEnabled = true;
+
+    this.cssW = cssW;
+    this.cssH = cssH;
   }
 
-  _pos(e) {
+  /** Coordenadas relativas al canvas en espacio CSS */
+  _coords(e) {
     const rect = this.canvas.getBoundingClientRect();
-    let clientX, clientY, pressure = 1;
-
-    if (e.touches && e.touches.length) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      if (e.touches[0].force > 0) pressure = Math.min(e.touches[0].force * 2, 1.5);
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-      if (typeof e.pressure === 'number' && e.pressure > 0) {
-        pressure = Math.min(e.pressure * 1.5, 1.5);
-      }
-    }
-
-    return {
-      x: (clientX - rect.left) * (this.logicalW / rect.width),
-      y: (clientY - rect.top) * (this.logicalH / rect.height),
-      pressure
-    };
+    const x = ((e.clientX - rect.left) / rect.width) * this.cssW;
+    const y = ((e.clientY - rect.top) / rect.height) * this.cssH;
+    return { x, y };
   }
 
   _start(e) {
+    // Solo un puntero a la vez
+    if (this.drawing) return;
     e.preventDefault();
-    this.drawing = true;
-    const p = this._pos(e);
-    this.lastX = p.x;
-    this.lastY = p.y;
-    this._dot(p);
-  }
+    e.stopPropagation();
 
-  _dot(p) {
-    const r = (this.lineWidth * p.pressure) / 2;
+    this.drawing = true;
+    this.pointerId = e.pointerId;
+
+    try {
+      this.canvas.setPointerCapture(e.pointerId);
+    } catch (err) {}
+
+    const { x, y } = this._coords(e);
+    this.lastX = x;
+    this.lastY = y;
+
+    // Punto inicial
     this.ctx.beginPath();
-    this.ctx.arc(p.x, p.y, Math.max(r, 0.5), 0, Math.PI * 2);
-    if (this.tool === 'eraser') {
-      this.ctx.globalCompositeOperation = 'destination-out';
-      this.ctx.fillStyle = '#000';
-    } else {
-      this.ctx.globalCompositeOperation = 'source-over';
-      this.ctx.fillStyle = this.color;
-    }
+    this.ctx.fillStyle = this.tool === 'eraser' ? '#000' : this.color;
+    this.ctx.globalCompositeOperation = this.tool === 'eraser' ? 'destination-out' : 'source-over';
+    this.ctx.arc(x, y, this.lineWidth / 2, 0, Math.PI * 2);
     this.ctx.fill();
   }
 
   _move(e) {
     if (!this.drawing) return;
+    // Ignorar otros punteros (palma, segundo dedo, etc.)
+    if (this.pointerId !== null && e.pointerId !== this.pointerId) return;
+
     e.preventDefault();
-    const p = this._pos(e);
-    const w = this.lineWidth * (0.4 + p.pressure * 0.6);
+    e.stopPropagation();
+
+    const { x, y } = this._coords(e);
 
     this.ctx.beginPath();
     this.ctx.moveTo(this.lastX, this.lastY);
-    this.ctx.lineTo(p.x, p.y);
-    this.ctx.lineWidth = w;
+    this.ctx.lineTo(x, y);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
 
     if (this.tool === 'eraser') {
       this.ctx.globalCompositeOperation = 'destination-out';
       this.ctx.strokeStyle = '#000';
-      this.ctx.lineWidth = w * 3;
+      this.ctx.lineWidth = this.lineWidth * 4;
     } else {
       this.ctx.globalCompositeOperation = 'source-over';
       this.ctx.strokeStyle = this.color;
+      this.ctx.lineWidth = this.lineWidth;
     }
     this.ctx.stroke();
-    this.lastX = p.x;
-    this.lastY = p.y;
+
+    this.lastX = x;
+    this.lastY = y;
   }
 
   _end(e) {
-    if (e) e.preventDefault();
+    if (!this.drawing) return;
+    if (e && this.pointerId !== null && e.pointerId !== this.pointerId) return;
+
+    if (e) {
+      e.preventDefault();
+      try {
+        this.canvas.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+
     this.drawing = false;
+    this.pointerId = null;
   }
 
   _bind() {
     const c = this.canvas;
-    // Pointer Events: mejor soporte para lápiz óptico (Surface Pen, etc.)
-    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); this._start(e); });
-    c.addEventListener('pointermove', (e) => this._move(e));
-    c.addEventListener('pointerup', (e) => { try { c.releasePointerCapture(e.pointerId); } catch(_){} this._end(e); });
-    c.addEventListener('pointercancel', (e) => this._end(e));
-    c.addEventListener('pointerleave', (e) => this._end(e));
 
-    // Touch (iPad, Android)
-    c.addEventListener('touchstart', (e) => this._start(e), { passive: false });
-    c.addEventListener('touchmove', (e) => this._move(e), { passive: false });
-    c.addEventListener('touchend', (e) => this._end(e), { passive: false });
+    // Solo Pointer Events (cubre mouse, dedo y lápiz óptico)
+    // NO añadir touch* a la vez: provoca doble trazo o que el stylus se cancele
+    c.addEventListener('pointerdown', (e) => this._start(e));
+    c.addEventListener('pointermove', (e) => this._move(e));
+    c.addEventListener('pointerup', (e) => this._end(e));
+    c.addEventListener('pointercancel', (e) => this._end(e));
+    // NO usar pointerleave: el stylus a veces lo dispara al escribir y corta el trazo
+
+    // Evitar menú contextual / selección al escribir
+    c.addEventListener('contextmenu', (e) => e.preventDefault());
+    c.addEventListener('selectstart', (e) => e.preventDefault());
   }
 
   setTool(t) { this.tool = t; }
   setColor(c) { this.color = c; }
-  setLineWidth(w) { this.lineWidth = Number(w) || 3; }
+  setLineWidth(w) { this.lineWidth = Math.max(1, Number(w) || 3); }
 
   clear() {
     this.ctx.save();
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.restore();
-    // Restaurar transform DPR
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
@@ -1122,7 +1153,9 @@ class DrawingPad {
       for (let i = 3; i < data.length; i += 4) {
         if (data[i] !== 0) return false;
       }
-    } catch (e) { return true; }
+    } catch (e) {
+      return true;
+    }
     return true;
   }
 
@@ -1138,7 +1171,8 @@ function initDrawingPads() {
   exercisePad = new DrawingPad('exercise-canvas', { color: '#1a3a6e', lineWidth: 3 });
   examPad = new DrawingPad('exam-canvas', { color: '#1a3a6e', lineWidth: 3 });
 
-  // Toolbar ejercicios
+  const el = (id) => document.getElementById(id);
+
   document.querySelectorAll('.tool-btn[data-pad="exercise"]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tool-btn[data-pad="exercise"]').forEach(b => b.classList.remove('active'));
@@ -1146,12 +1180,10 @@ function initDrawingPads() {
       if (exercisePad) exercisePad.setTool(btn.dataset.tool);
     });
   });
-  const el = (id) => document.getElementById(id);
   if (el('exercise-pen-color')) el('exercise-pen-color').addEventListener('input', e => exercisePad && exercisePad.setColor(e.target.value));
   if (el('exercise-pen-size')) el('exercise-pen-size').addEventListener('input', e => exercisePad && exercisePad.setLineWidth(e.target.value));
   if (el('exercise-clear-canvas')) el('exercise-clear-canvas').addEventListener('click', () => exercisePad && exercisePad.clear());
 
-  // Toolbar examen
   document.querySelectorAll('.tool-btn[data-pad="exam"]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tool-btn[data-pad="exam"]').forEach(b => b.classList.remove('active'));
@@ -1167,35 +1199,34 @@ function initDrawingPads() {
     });
   }
 
-  // Limpiar pizarra de ejercicios al generar nuevo
-  const newBtn = el('new-exercise-btn');
-  if (newBtn) {
-    newBtn.addEventListener('click', () => setTimeout(() => exercisePad && exercisePad.clear(), 30));
+  if (el('new-exercise-btn')) {
+    el('new-exercise-btn').addEventListener('click', () => setTimeout(() => exercisePad && exercisePad.clear(), 30));
+  }
+  if (el('start-exam-btn')) {
+    el('start-exam-btn').addEventListener('click', () => setTimeout(() => {
+      if (examPad) {
+        examPad._fitToDisplay();
+        examPad.clear();
+      }
+    }, 150));
   }
 
-  // Limpiar pizarra de examen al iniciar
-  const startBtn = el('start-exam-btn');
-  if (startBtn) {
-    startBtn.addEventListener('click', () => setTimeout(() => examPad && examPad.clear(), 80));
-  }
-
-  // Antes de enviar examen: si no hay foto subida, usar el dibujo de la pizarra
-  const submitBtn = el('submit-exam-btn');
-  if (submitBtn) {
-    submitBtn.addEventListener('click', () => {
+  // Antes de enviar: exportar pizarra si no hay foto
+  if (el('submit-exam-btn')) {
+    el('submit-exam-btn').addEventListener('click', () => {
       if (typeof procedureImageData !== 'undefined' && !procedureImageData && examPad && !examPad.isEmpty()) {
         try {
           procedureImageData = examPad.toDataURL('image/jpeg', 0.8);
-        } catch (err) {
-          console.warn('Export pizarra:', err);
-        }
+        } catch (err) {}
       }
     }, true);
   }
 }
 
+// Inicializar pizarras (después del resto del DOM)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initDrawingPads);
 } else {
-  initDrawingPads();
+  // Pequeño delay para asegurar layout
+  setTimeout(initDrawingPads, 50);
 }
